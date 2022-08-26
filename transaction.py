@@ -15,11 +15,11 @@ import os
 class Transaction(object):
     def __init__(self, sender, receiver, amt, date=None, hash=None, signature=None):
         if type(sender) is rsa.RSAPublicKey:
-            self.sender = self.pem_public_key_to_just_string(sender)
+            self.sender = self.pem_public_key_to_just_string(self, sender)
         else:
             self.sender = sender
         if type(receiver) is rsa.RSAPublicKey:
-            self.receiver = self.pem_public_key_to_just_string(receiver)
+            self.receiver = self.pem_public_key_to_just_string(self, receiver)
         else:
             self.receiver = receiver
         self.amt = amt
@@ -38,7 +38,7 @@ class Transaction(object):
             self.signature = signature
 
     def calculate_hash(self):
-        hashString = key_functions.pem_public_key_to_just_string(self.sender) + key_functions.pem_public_key_to_just_string(self.receiver) + str(self.amt) + str(self.date)
+        hashString = self.sender + self.receiver + str(self.amt) + str(self.date)
         hashEncoded = json.dumps(hashString, sort_keys=True).encode()
         return hashlib.sha256(hashEncoded).hexdigest()
 
@@ -89,7 +89,11 @@ class Transaction(object):
 
     def saveTransaction(self, path):
         jsonfile = json.dumps(
-            {"sender": str(self.sender), "receiver": str(self.receiver), "amount": self.amt, "time": self.time,
+            {"sender": str(self.sender),
+             "receiver": str(self.receiver),
+             "amount": self.amt,
+             "time": self.date,
+             "hash": self.hash,
              "signature": str(self.signature)})
         count = 0
         # Iterate directory
@@ -105,7 +109,7 @@ class Transaction(object):
 
     def export_as_json(self):
         jsonfile = json.dumps(
-            {"sender": str(self.sender), "receiver": str(self.receiver), "amount": self.amt, "time": self.time,
+            {"sender": str(self.sender), "receiver": str(self.receiver), "amount": self.amt, "time": self.date,
              "signature": str(self.signature)}, sort_keys=True)
         return jsonfile
 
@@ -132,3 +136,14 @@ class Transaction(object):
         res.replace('\n', '')
         print(res)
         return res
+
+    def read_as_string(self):
+        product = ""
+        product += "sender: " + self.sender + "\n"
+        product += "receiver: " + self.receiver + "\n"
+        product += "amount: " + str(self.amt) + "\n"
+        product += "hash: " + str(self.hash) + "\n"
+        product += "time: " + str(self.date) + "\n"
+        product += "signature: " + str(self.signature) + "\n"
+
+        return product

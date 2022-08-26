@@ -1,3 +1,4 @@
+import json
 import os
 
 import blockchain
@@ -49,8 +50,13 @@ def get_pending_transactions_in_block_size():
 
                             jsonfile = open(os.path.join("pending_transactions/", ta), "r")
                             transact = decode_json(jsonfile.read())
-                            print("opened file")
                             jsonfile.close()
+                            if transact is None:
+                                print("No transaction, breaking")
+                                os.remove(os.path.join("pending_transactions/", ta))
+                                print("Removed File: " + os.path.join("pending_transactions/", ta))
+                                break
+
 
                             pending_transactions.append(transact)
                             os.remove(os.path.join("pending_transactions/", ta))
@@ -59,9 +65,9 @@ def get_pending_transactions_in_block_size():
 
                         except Exception:
                             print("Exception")
-                            # os.remove(os.path.join("pending_transactions/", ta))
-                            # print("Removed File 2: " + os.path.join("pending_transactions/", ta))
-                            # count -= 1
+                            os.remove(os.path.join("pending_transactions/", ta))
+                            print("Removed File: " + os.path.join("pending_transactions/", ta))
+                            count -= 1
                         if count <= 3:
                             print("Not enough pending transactions")
         return pending_transactions
@@ -72,38 +78,36 @@ def get_pending_transactions_in_block_size():
 def share_block_for_mining(block):
     if not os.path.exists("raw_blocks"):
         os.mkdir("raw_blocks")
-    if not os.path.exists("raw_blocks/mining_data"):
-        os.mkdir("raw_blocks/mining_data")
-    block.save_unmined_block("raw_blocks/")
-
-    mining_file = open("raw_blocks/mining_data.rad", "w")
-    mining_file.write("block:"+block.index)
 
 
 def decode_json(jsonstring):
     print("Started decoding")
     print(jsonstring)
-    jsonvalues = jsonstring.replace("{", "").replace("}", "").replace(" ", "").split(",")
-    sender = str(jsonvalues[0]).split(":")[1].replace('"', '')
+    values_dict = json.loads(jsonstring)
+
+    sender = values_dict['sender']
     print("Sender: " + sender)
 
-    receiver = str(jsonvalues[1]).split(":")[1].replace('"', '')
+    receiver = values_dict['receiver']
     print("Receiver: " + receiver)
 
-    amount = str(jsonvalues[2]).split(":")[1].replace('"', '')
-    print("Amount: " + amount)
+    amount = values_dict['amount']
+    print("Amount: " + str(amount))
 
-    time = str(jsonvalues[3]).split(":")[1].replace('"', '')
-    print("Time: " + time)
+    time = values_dict['time']
+    print("Time: " + str(time))
 
-    signature = str(jsonvalues[4]).split(":")[1].replace('"', '')
+    signature = values_dict['signature']
     print("Signature: " + signature)
 
-    print("Creating signature")
-
     print("Writing transaction")
-    transact = transaction.Transaction(sender=sender, receiver=receiver, amt=float(amount), date=time,
+    try:
+        transact = transaction.Transaction(sender=sender, receiver=receiver, amt=float(amount), date=time,
                                        signature=signature)
+    except Exception:
+        print("Error 3: Could not create transaction!")
+        return None
+
     print(transact)
     return transact
 

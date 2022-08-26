@@ -17,10 +17,10 @@ def get_raw_blockfiles_list():
     return blocks
 
 def get_raw_last_block_in_chain():
-    result = sorted(filter(os.path.isfile, os.listdir('blockchain')), key=os.path.getmtime)
+    result = sorted(filter(os.path.isfile, os.listdir('block_chain')), key=os.path.getmtime)
     if (len(result) < 1 or None):
         return None
-    blockfile = open(os.path.join('blockchain',result[0]))
+    blockfile = open(os.path.join('block_chain',result[0]))
 
 
 def connect():
@@ -39,7 +39,7 @@ def connect():
 
         # Uploading
         upload_blocklist(blocklist, client_socket, s)
-        upload_block(get_raw_last_block_in_chain(), s)
+        #upload_block(get_raw_last_block_in_chain(), s)
         client_socket.close()
         blocklist = get_raw_blockfiles_list()
 

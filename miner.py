@@ -11,6 +11,7 @@ from block import Block
 from blockchain import Blockchain
 from transaction import Transaction
 import key_functions
+import miner_block_distributor
 
 buffer_size = 8192
 max_amount = None
@@ -33,12 +34,32 @@ def get_raw_blockfiles_list():
 
 def main():
     miner_id = get_miner_id("minerdata/mining.json")
-    print("Hello miner! ")
-    print("Miner id: " + miner_id)
-    wait_for_raw_bocks(miner_id)
+    while True:
+        choice = input(
+            "Hello Miner. Please Select whether to"
+            "\n"
+            "[1]: Receive blocks from the server or "
+            "\n"
+            "[2]: Solve the received blocks"
+            "\n"
+            "[3]: Upload the hashed (solved) blocks"
+            "\n")
+        choice.strip()
+
+        if int(choice) == 1:
+            print("Waiting for blocks...")
+            wait_for_raw_bocks()
+        if int(choice) == 2:
+            print("Solving blocks... get ready for a lot of numbers")
+            solve_blocks()
+        if int(choice) == 3:
+            print("Uploading blocks to the server")
+            miner_block_distributor.connect()
+
+        print("----------------------------------\n\n")
 
 
-def wait_for_raw_bocks(miner_id):
+def wait_for_raw_bocks():
     while True:
         host_path = open("minerdata/server-address-mining.txt", "r")
         (host, port) = host_path.readlines()[0].lstrip(' ').replace('"', '').split(";")
@@ -69,6 +90,9 @@ def wait_for_raw_bocks(miner_id):
                 print(read_bytes.decode('utf8'))
             s.close()
 
+        '''
+        # Yet again, this code used to be important when the blocks were sorted, but now it's useless
+        
         s = socket.socket()
         s.connect((host, port))
         blockfile = open("minerdata/last_blockchain_block.json", "wb")
@@ -80,9 +104,10 @@ def wait_for_raw_bocks(miner_id):
             blockfile.write(read_bytes)
             print(read_bytes.decode('utf8'))
         s.close()
+        '''
 
         if stop_updating:
-            print("Retrieved all current blocks")
+            print("Received all current blocks")
             s.close()
             break
     # solve_blocks()
@@ -100,29 +125,22 @@ def get_last_number_in_chain():
 def get_block_hash(b):
     path = os.path.join('minerdata/blocks', b + ".json")
     text = open(path, "r").read()
-    # I know this might work another way but the json module is very hard to get to work,
-    # and I am not risking anything today
 
-    if text.lstrip() == "Null" or "":
-        return ""
-    else:
-        with open(path) as jfile:
-            print("opening " + path)
-            jfile.seek(0)
-            json_f = json.load(jfile)
-        return str(json_f["hash"])
+    block_json = json.loads(text)
+    return block_json['hash']
 
 
 def solve_blocks():
-    prev_number = get_last_number_in_chain()
+    # prev_number = get_last_number_in_chain()
+    # Redundant code, only kept for sentimental reasons. Used to be important when the blockchain had to be sorted,
+    # but I deemed that too inefficient
     sorted_proof_numbers = []
     for b in range(len(get_raw_blockfiles_list())):
         path = os.path.join('minerdata/blocks', str(b) + ".json")
-        save_path = os.path.join('minerdata/hashed-blocks', str(b) + ".json")
-        # This may seem weird, but it's absolutely not necessary to use the same block to verify itself
+        save_path = os.path.join('minerdata/hashed-blocks/')
 
-        n = key_functions.proof_of_work(prev_number, get_block_hash(str(b)))
-        prev_number = n
+        n = key_functions.proof_of_work(block_hash=get_block_hash(str(b)))
+        # prev_number = n
         finished_block = get_block_from_json(path, n)
         finished_block.save_block(save_path)
 
@@ -147,8 +165,8 @@ def get_block_from_json(path, proof_number):
         date = trade_dec["time"]
         sign = trade_dec["signature"]
 
-        t = transaction.Transaction(sender, receiver, amount, date, sign)
-        print(str(t))
+        t = transaction.Transaction(sender=sender, receiver=receiver, amt=amount, date=date, signature=sign)
+        print(t.read_as_string())
         transactions.append(t)
 
     time = float(block_json["time"])
@@ -158,12 +176,12 @@ def get_block_from_json(path, proof_number):
     miner = key_functions.pem_public_key_to_just_string(key_functions.load_public_key("keys/public_key.pem"))
 
     hash = str(block_json["hash"])
-    print(hash)
+    print("Block hash: " + hash)
 
     final_block = block.Block(transactions, time, prev=prev, hash=hash, proof_number=proof_number, miner=miner)
-    print(final_block.hash)
+    print("Final block hash: " + final_block.hash)
 
     return final_block
 
 
-solve_blocks()
+main()

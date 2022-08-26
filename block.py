@@ -8,10 +8,10 @@ import json
 import time
 from typing import KeysView
 from cryptography.hazmat.primitives.asymmetric import rsa
-from transaction import Transaction
-
+import transaction
 
 class Block(object):
+
     def __init__(self, transactions, creation_time=time.time(), prev=None, hash=None, proof_number=None, miner=None):
 
         self.transactions = []
@@ -19,10 +19,10 @@ class Block(object):
         self.transactions = transactions  # Stored transactions
         self.time = creation_time  # Time of block creation
 
-        if prev is None:        # Hash of previous block, empty if genesis block
-            self.prev = ''      # Make it empty
+        if prev is None:  # Hash of previous block, empty if genesis block
+            self.prev = ''  # Make it empty
         else:
-            self.prev = prev    # Fill in previous blocks hash
+            self.prev = prev  # Fill in previous blocks hash
 
         if hash is None:
             self.hash = self.calculate_hash()  # Hash of block
@@ -49,28 +49,42 @@ class Block(object):
 
     def save_block(self, path):
         if not os.path.exists(path):
-            transactions = []
-            for transaction in self.transactions:
-                transactions.append(str(transaction.export_as_json()))
-            json_string = json.dumps(
-                {
-                    "index":           self.index,
-                    "transactions":    transactions,
-                    "time":            self.time,
-                    "prev":            self.prev,
-                    "hash":            self.hash,
-                    "proof_number":    self.proof_number,
-                    "miner":           self.miner
-                })
-            save_file = open(path, "w")
-            save_file.write(json_string)
-            save_file.close()
+            return
+
+        transactions = []
+        for trade in self.transactions:
+            transactions.append(str(trade.export_as_json()))
+
+        count = 0
+        # Iterate directory
+        for b in os.listdir(path):
+            # check if current path is a file
+            if os.path.isfile(os.path.join(path, b)):
+                count += 1
+
+        print(str(count) + " blocks in " + path)
+        # Dump values as json
+        json_string = json.dumps(
+            {
+                "index": self.index,
+                "transactions": transactions,
+                "time": self.time,
+                "prev": self.prev,
+                "hash": self.hash,
+                "proof_number": self.proof_number,
+                "miner": self.miner
+            })
+
+        print("Saved file as " + (os.path.join(path + "block-" + str(count + 1) + ".json")))
+        save_file = open(os.path.join(path + "block-" + str(count + 1) + ".json"), "w")
+        save_file.write(json_string)
+        save_file.close()
 
     def save_unmined_block(self, path):
         if not os.path.exists(path + "self.index"):
             transactions = []
-            for transaction in self.transactions:
-                transactions.append(str(transaction.export_as_json()))
+            for trade in self.transactions:
+                transactions.append(str(trade.export_as_json()))
 
             count = 0
             # Iterate directory
@@ -80,7 +94,8 @@ class Block(object):
                     count += 1
 
             json_string = json.dumps(
-                {"index": count,
+                {
+                 "index": count,
                  "transactions": transactions,
                  "time": self.time,
                  "prev": self.prev,

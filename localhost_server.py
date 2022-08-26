@@ -10,7 +10,8 @@ import tqdm
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 import blockchain
-import transaction
+
+from transaction import Transaction
 from block import Block
 
 # device's IP address
@@ -24,8 +25,6 @@ SEPARATOR = "<SEPARATOR>"
 
 blockchain = blockchain.Blockchain()
 
-
-# FIXME need to enumerate transactions to avoid accidentally overwriting existing ones
 
 def set_up():
     if not os.path.exists("pending_transactions"):
@@ -78,7 +77,14 @@ def accept_transactions():
         filename = os.path.basename(filename)
         filesize = int(filesize)
         uploading = True
-        with open(filename, "wb") as f:
+
+        count = 0
+        for t in os.listdir("pending_transactions"):
+            # check if current path is a file
+            if os.path.isfile(os.path.join("pending_transactions", t)):
+                count += 1
+
+        with open("pending_transactions/"+"transaction-" + str(count)+".json", "wb") as f:
             # read 1024 bytes from the socket (receive)
             bytes_read = client_socket.recv(BUFFER_SIZE)
             while bytes_read:
@@ -88,7 +94,8 @@ def accept_transactions():
             print("Finished download")
             f.close()
         client_socket.close()
-        shutil.move(filename, "pending_transactions/" + filename)
+        print("Socket closed")
+        print("Saved file")
     print("Closed connection")
 
     # close the client socket

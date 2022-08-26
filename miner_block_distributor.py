@@ -4,7 +4,7 @@ from block import Block
 import json
 
 SERVER_HOST = "127.0.0.1"
-MINER_PORT = 5040
+MINER_PORT = 5045
 SEPARATOR = "<SEPARATOR>"
 BUFFER_SIZE = 8192  # send 8192 bytes each time step (1KB)
 
@@ -34,7 +34,7 @@ def get_raw_last_block_in_chain():
 
 
 def connect():
-    print("Miner Block Distributor")
+    print("Miner Block Distributor initializing")
     print("Using server: " + host)
     print("with port " + str(port))
 
@@ -82,6 +82,3 @@ def upload_block(upload, s):
                 break
             s.sendall(bytes_read)
         print("Sent block to server")
-
-
-connect()

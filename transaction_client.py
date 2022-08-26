@@ -1,3 +1,5 @@
+import shutil
+
 import key_functions
 from transaction import Transaction
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -23,6 +25,27 @@ def start():
 
     open('clientdata/finished.txt', 'r')
     print("Transaction Client")
+
+    if not os.path.exists("clientdata/blockchain-address.txt"):
+        open("clientdata/blockchain-address.txt", "w").write('0.0.0.0;5010')
+
+
+    while True:
+        choice = input("Hello User. Please Select whether to\n[1]: Create a new transaction or \n[2]: Upload all created "
+              "transactions to the server\n")
+        choice.strip()
+
+        if int(choice) == 1:
+            print("Creating transaction")
+            create_transaction()
+        if int(choice) == 2:
+            print("Uploading transactions")
+            upload_transactions()
+
+        print("----------------------------------\n\n")
+
+
+def create_transaction():
     address_str = input("Welcome user! Please insert a valid path without spaces to the public address of receiver "
                         "as a .pem file: \n")
 
@@ -40,10 +63,12 @@ def start():
      #   return False
 
     print("Calculating transaction...")
-    transaction = Transaction(sender=home_address, receiver=address, amt=amount)
+    transaction = Transaction(sender=key_functions.pem_public_key_to_just_string(home_address),
+                              receiver=key_functions.pem_public_key_to_just_string(address), amt=amount,
+                              hash=None)
     print(transaction)
-    print("Sender: " + key_functions.pem_public_key_to_just_string(transaction.sender))
-    print("Receiver: " + key_functions.pem_public_key_to_just_string(transaction.receiver))
+    print("Sender: " + transaction.sender)
+    print("Receiver: " + transaction.receiver)
     print("Amount: " + str(transaction.amt))
 
     input("press confirm to sign with your private key")
@@ -69,16 +94,9 @@ def start():
     transaction_file = transaction.saveTransaction('clientdata/transactions/')
     print("Succesfully saved transaction as json file under clientdata/transactions")
 
-    if not os.path.exists("clientdata/blockchain-address.txt"):
-        open("clientdata/blockchain-address.txt", "w").write('0.0.0.0;5010')
-    input(
-        "Press any key to start upload to standard blockchain. Change path in clientdata/blockchain-address, "
-        "port after semicolon\n")
 
-    upload_transaction(transaction_file)
+def upload_transactions():
 
-
-def upload_transaction(upload):
     SEPARATOR = "<SEPARATOR>"
     BUFFER_SIZE = 1024  # send 1024 bytes each time step (1KB)
 
@@ -88,36 +106,46 @@ def upload_transaction(upload):
     print("Using server: " + host)
     print("with port " + str(port))
 
-    filesize = os.path.getsize(upload)
+    for upload in os.listdir('clientdata/transactions'):
 
-    s = socket.socket()
-    print(f"Connecting to {host}:{port}")
-    s.connect((host, port))
-    print("Successful connection. Sending file...")
+        upload = os.path.join('clientdata/transactions', upload)
+        filesize = os.path.getsize(upload)
 
-    s.send(f"{upload}{SEPARATOR}{filesize}".encode())
+        s = socket.socket()
+        print(f"Connecting to {host}:{port}")
+        s.connect((host, port))
+        print("Successful connection. Sending file " + upload)
 
-    # start sending the file
-    with open(upload, "rb") as f:
-        while True:
-            # read the bytes from the file
-            bytes_read = f.read(BUFFER_SIZE)
-            if not bytes_read:
-                # file transmitting is done
-                break
-            # we use sendall to assure transimission in 
-            # busy networks
-            print(bytes_read.decode('utf8'))
-            s.sendall(bytes_read)
-            # update the progress bar
-    # close the socket
-    print("Finished upload, closing socket...")
-    s.close()
-    print("Closed socket")
+        s.send(f"{upload}{SEPARATOR}{filesize}".encode())
 
-    print("Moving transaction file to the archives...")
+        # start sending the file
+        with open(upload, "rb") as f:
+            while True:
+                # read the bytes from the file
+                bytes_read = f.read(BUFFER_SIZE)
+                if not bytes_read:
+                    # file transmitting is done
+                    break
+                # we use sendall to assure transimission in
+                # busy networks
+                print(bytes_read.decode('utf8'))
+                s.sendall(bytes_read)
+                # update the progress bar
+        # close the socket
+        print("Finished upload, closing socket...")
+        s.close()
+        print("Closed socket")
 
-    input("Press any key to close")
+        print("Moving transaction file to the archives...")
+
+        count_archive = 0
+        # Iterate directory
+        for t in os.listdir('clientdata/transactions_archive'):
+            # check if current path is a file
+            if os.path.isfile(os.path.join('clientdata/transactions_archive', t)):
+                count_archive += 1
+
+        os.rename(upload, "clientdata/transactions_archive/transaction-" + str(count_archive+1) + ".json")
 
 
 def load_private_key():
